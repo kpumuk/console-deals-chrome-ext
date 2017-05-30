@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Set Page Color Popup</title>
+    <style>
+      body {
+        overflow: hidden;
+        margin: 0px;
+        padding: 0px;
+        background: white;
+        background: #0c3698;
+        font-family: Verdana;
+      }
+      #container {
+        margin: 10px;
+        padding: 0px;
+        background: #ffffff;
+        border: 1px solid #b2c9f5;
+        border-radius: 5px;
+        min-width: 600px;
+        min-height: 200px;
+      }
+      #result, #progress, #error {
+        width: 600px;
+        height: 100%;
+        text-align: center;
+        vertical-align: middle;
+      }
+      #result {}
+      #result textarea {
+        width: 580px;
+        height: 260px;
+        padding: 10px;
+        margin: 0px;
+        font-family: Verdana;
+        font-size: 0.85rem;
+        line-height: 1rem;
+        border: 0px;
+      }
+      #progress h3, #error h3 {
+        text-align: center;
+      }
+      #spinner {
+        margin: 20px auto;
+      }
+      #result, #error { display: none; }
+      #error h3 {
+        color: red;
+        min-height: 200px;
+        line-height: 200px;
+      }
+      #error-message {
+        display: inline-block;
+        vertical-align: middle;
+        line-height: 1.5rem;
+        padding: 0px 50px;
+      }
+    </style>
+    <link href="spinner.css" rel="stylesheet" />
+    <script src="jquery-3.2.1.min.js"></script>
+    <script src="popup.js"></script>
+  </head>
+  <body>
+    <div id="container">
+      <div id="result">
+        <textarea id="reddit-table"></textarea>
+      </div>
+      <div id="progress">
+        <div id="spinner" spinner>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+          <div></div>
+        </div>
+        <h3>Loading Discounts Data</h3>
+      </div>
+      <div id="error">
+        <h3><span id="error-message">Hello World</span></h3>
+      </div>
+    </div>
+  </body>
+</html>
