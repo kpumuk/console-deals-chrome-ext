@@ -1,13 +1,13 @@
 {
   "manifest_version": 2,
   "name": "Console Deals to Reddit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "content_scripts": [
     {
       "matches": [
         "https://store.playstation.com/*",
         "http://www.xbox.com/*",
-        "https://www.xbox.com/*",
+        "https://www.xbox.com/*"
       ],
       "js": ["jquery-3.2.1.min.js", "content.js"]
     }

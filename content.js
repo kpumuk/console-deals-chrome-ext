@@ -1,7 +1,14 @@
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-  return renderTable(sendResponse);
+  switch(location.host) {
+    case "store.playstation.com":
+      return renderPlayStationTable(sendResponse);
+    case "www.xbox.com":
+      return renderXboxTable(sendResponse);
+    default:
+      return sendResponse({error: "Unknown website, should never happen"});
+  }
 
-  function renderTable(sendResponse) {
+  function renderPlayStationTable(sendResponse) {
     var matches = location.hash.match(/cid=([a-zA-Z0-9\-]+).*/);
     var cid;
     if (matches) {
@@ -71,6 +78,39 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
       sendResponse({data: result});
     });
+
+    // Async sendResponse
+    return true;
+  }
+
+  function renderXboxTable(sendResponse) {
+    var urlRegion = document.URL.split("/")[3].toLowerCase();
+    var countryCode = urlRegion.split("-")[1].toUpperCase();
+
+    var rawGuids = []
+    $(".gameDiv[data-bigid]").each(function() {
+      rawGuids.push($(this).attr("data-bigid"));
+    });
+    console.log(rawGuids);
+    var guidUrl = 'https://displaycatalog.mp.microsoft.com/v7.0/products?bigIds=' + rawGuids.join(",") + '&market=' + countryCode + '&languages=' + urlRegion + '&MS-CV=DGU1mcuYo0WMMp+F.1';
+
+    var result = "Game|Price|% Off\n|:--|:--|:--\n";
+    $.getJSON(guidUrl, function(d) {
+      $('.x1Games section.m-product-placement-item').each(function(idx, el) {
+        var bigid = $(el).attr('data-bigid');
+        var product = d.Products.find(function(g) { return g.ProductId == bigid });
+        console.log(product.DisplaySkuAvailabilities[0].Availabilities);
+
+        result +=
+          "[" + $('.x1GameName', el)[0].innerText.replace("[", "\\[").replace("]", "\\]") + "]" +
+          "(" + 'https://www.microsoft.com/en-ca/store/p/-/' + bigid + ")|" +
+          (product ? "$" + product.DisplaySkuAvailabilities[0].Availabilities[1].OrderManagementData.Price.ListPrice : "—") + "|" +
+          $('.x1GamePrice', el)[0].innerText +
+          "\n";
+      });
+      sendResponse({data: result});
+    });
+
     // Async sendResponse
     return true;
   }
