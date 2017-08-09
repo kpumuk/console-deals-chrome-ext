@@ -1,4 +1,5 @@
 require 'json'
+require 'fileutils'
 
 FILES = [
   'manifest.json',
@@ -8,13 +9,13 @@ FILES = [
   'popup.html',
   'popup.js',
   'spinner.css',
-  'img/icon-*.png',
+  'img/icon-128x128.png',
 ]
 
 BUILDNAME = 'console-deals'
 
 task :build do
   manifest = JSON.parse(File.read('manifest.json'))
-  File.delete("#{BUILDNAME}-#{manifest['version']}.zip")
+  FileUtils.rm_rf("#{BUILDNAME}-#{manifest['version']}.zip")
   sh "zip #{BUILDNAME}-#{manifest['version']}.zip #{FILES.map { |x| "'#{x}'" }.join(' ')}"
 end
