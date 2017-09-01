@@ -14,8 +14,11 @@ FILES = [
 
 BUILDNAME = 'console-deals'
 
+desc 'Build release package'
 task :build do
   manifest = JSON.parse(File.read('manifest.json'))
   FileUtils.rm_rf("#{BUILDNAME}-#{manifest['version']}.zip")
   sh "zip #{BUILDNAME}-#{manifest['version']}.zip #{FILES.map { |x| "'#{x}'" }.join(' ')}"
 end
+
+task default: :build
