@@ -41,7 +41,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             link.plusReward = reward;
             link.normalReward = reward;
           } else if (reward.isPlus) {
-            if (!link.plusReward || reward.discount > link.plusReward.discount) {
+            if (!link.plusReward || (reward.bonus_discount || reward.discount || 0) > (link.plusReward.bonus_discount || link.plusReward.discount || 0)) {
               hasPSPlusDiscounts = true;
               link.plusReward = reward;
             }
