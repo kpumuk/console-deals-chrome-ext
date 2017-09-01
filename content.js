@@ -41,11 +41,15 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             link.plusReward = reward;
             link.normalReward = reward;
           } else if (reward.isPlus) {
-            hasPSPlusDiscounts = true;
-            link.plusReward = reward;
+            if (!link.plusReward || reward.discount > link.plusReward.discount) {
+              hasPSPlusDiscounts = true;
+              link.plusReward = reward;
+            }
           } else {
-            hasDiscounts = true;
-            link.normalReward = reward;
+            if (!link.normalReward || reward.discount > link.normalReward.discount) {
+              hasDiscounts = true;
+              link.normalReward = reward;
+            }
           }
         })
       });
