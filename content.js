@@ -20,6 +20,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     var cacheBust = new Date().getTime();
     var url = 'https://store.playstation.com/chihiro-api/viewfinder/US/en/19/' + cid + '?platform=ps4&size=300&gkb=1&geoCountry=US&t=' + cacheBust;
     $.getJSON(url, function(d) {
+      if (d.links.length == 0) {
+        return sendResponse({error: "No results found, reloading in 5 seconds...", retryIn: 5000});
+      }
+
       var filteredLinks = $.grep(d.links, function(link) {
         return link.playable_platform.find(function(platform) {
           return !!platform.match(/^ps4/i);
