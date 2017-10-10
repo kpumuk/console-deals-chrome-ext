@@ -17,7 +17,8 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       return sendResponse({error: "Please navigate to a PlayStation sale page"});
       // return false;
     }
-    var url = 'https://store.playstation.com/chihiro-api/viewfinder/US/en/19/' + cid + '?size=300';
+    var cacheBust = new Date().getTime();
+    var url = 'https://store.playstation.com/chihiro-api/viewfinder/US/en/19/' + cid + '?platform=ps4&size=300&gkb=1&geoCountry=US&t=' + cacheBust;
     $.getJSON(url, function(d) {
       var filteredLinks = $.grep(d.links, function(link) {
         return link.playable_platform.find(function(platform) {
@@ -95,7 +96,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     $(".gameDiv[data-bigid]").each(function() {
       rawGuids.push($(this).attr("data-bigid"));
     });
-    console.log(rawGuids);
+    // console.log(rawGuids);
     var guidUrl = 'https://displaycatalog.mp.microsoft.com/v7.0/products?bigIds=' + rawGuids.join(",") + '&market=' + countryCode + '&languages=' + urlRegion + '&MS-CV=DGU1mcuYo0WMMp+F.1';
 
     var result = "Game|Price|% Off\n|:--|:--|:--\n";
@@ -103,7 +104,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       $('.x1Games section.m-product-placement-item').each(function(idx, el) {
         var bigid = $(el).attr('data-bigid');
         var product = d.Products.find(function(g) { return g.ProductId == bigid });
-        console.log(product.DisplaySkuAvailabilities[0].Availabilities);
+        // console.log(product.DisplaySkuAvailabilities[0].Availabilities);
 
         result +=
           "[" + $('.x1GameName', el)[0].innerText.replace("[", "\\[").replace("]", "\\]") + "]" +
