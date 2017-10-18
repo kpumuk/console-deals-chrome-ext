@@ -20,6 +20,10 @@
         min-width: 600px;
         min-height: 200px;
       }
+      #options {
+        background: #f0f8ff;
+        padding: 5px;
+      }
       #result, #progress, #error {
         width: 600px;
         height: 100%;
@@ -62,6 +66,14 @@
   </head>
   <body>
     <div id="container">
+      <div id="options">
+        <label for="region">Region</label>
+        <select id="region">
+          <option value="CA">Canada</option>
+          <option value="US" selected>United States</option>
+          <option value="GB">United Kingdom</option>
+        </select>
+      </div>
       <div id="result">
         <textarea id="reddit-table"></textarea>
       </div>

@@ -1,14 +1,14 @@
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   switch(location.host) {
     case "store.playstation.com":
-      return renderPlayStationTable(sendResponse);
+      return renderPlayStationTable(sendResponse, request.region);
     case "www.xbox.com":
       return renderXboxTable(sendResponse);
     default:
       return sendResponse({error: "Unknown website, should never happen"});
   }
 
-  function renderPlayStationTable(sendResponse) {
+  function renderPlayStationTable(sendResponse, region) {
     var matches = location.hash.match(/cid=([a-zA-Z0-9\-]+).*/);
     var cid;
     if (matches) {
@@ -18,75 +18,79 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       // return false;
     }
     var cacheBust = new Date().getTime();
-    var url = 'https://store.playstation.com/chihiro-api/viewfinder/US/en/19/' + cid + '?platform=ps4&size=300&gkb=1&geoCountry=US&t=' + cacheBust;
-    $.getJSON(url, function(d) {
-      if (d.links.length == 0) {
-        return sendResponse({error: "No results found, reloading in 5 seconds...", retryIn: 5000});
-      }
+    var url = 'https://store.playstation.com/chihiro-api/viewfinder/' + region + '/en/19/' + cid + '?platform=ps4&size=300&gkb=1&geoCountry=' + region + '&t=' + cacheBust;
+    $.getJSON(url)
+      .done(function(d) {
+        if (d.links.length == 0) {
+          return sendResponse({error: "No results found, reloading in 5 seconds...", retryIn: 5000});
+        }
 
-      var filteredLinks = $.grep(d.links, function(link) {
-        return link.playable_platform.find(function(platform) {
-          return !!platform.match(/^ps4/i);
+        var filteredLinks = $.grep(d.links, function(link) {
+          return link.playable_platform.find(function(platform) {
+            return !!platform.match(/^ps4/i);
+          });
         });
-      });
 
-      var sortedLinks = filteredLinks.sort(function(a, b) {
-        if (a.name > b.name) return 1;
-        if (a.name < b.name) return -1;
-        return 0
-      });
+        var sortedLinks = filteredLinks.sort(function(a, b) {
+          if (a.name > b.name) return 1;
+          if (a.name < b.name) return -1;
+          return 0
+        });
 
-      var hasDiscounts = false;
-      var hasPSPlusDiscounts = false;
-      $(sortedLinks).each(function(idx, link) {
-        $(link.default_sku.rewards).each(function(_, reward) {
-          if (reward.bonus_discount) {
-            hasDiscounts = true;
-            hasPSPlusDiscounts = true;
-            link.plusReward = reward;
-            link.normalReward = reward;
-          } else if (reward.isPlus) {
-            if (!link.plusReward || (reward.bonus_discount || reward.discount || 0) > (link.plusReward.bonus_discount || link.plusReward.discount || 0)) {
+        var hasDiscounts = false;
+        var hasPSPlusDiscounts = false;
+        $(sortedLinks).each(function(idx, link) {
+          $(link.default_sku.rewards).each(function(_, reward) {
+            if (reward.bonus_discount) {
+              hasDiscounts = true;
               hasPSPlusDiscounts = true;
               link.plusReward = reward;
-            }
-          } else {
-            if (!link.normalReward || reward.discount > link.normalReward.discount) {
-              hasDiscounts = true;
               link.normalReward = reward;
+            } else if (reward.isPlus) {
+              if (!link.plusReward || (reward.bonus_discount || reward.discount || 0) > (link.plusReward.bonus_discount || link.plusReward.discount || 0)) {
+                hasPSPlusDiscounts = true;
+                link.plusReward = reward;
+              }
+            } else {
+              if (!link.normalReward || reward.discount > link.normalReward.discount) {
+                hasDiscounts = true;
+                link.normalReward = reward;
+              }
             }
-          }
-        })
-      });
+          })
+        });
 
-      var result = "Game";
-      if (hasDiscounts) { result += "|Price|% Off"; }
-      if (hasPSPlusDiscounts) { result += "|PS+|% Off"; }
-      result += "\n:--";
-      if (hasDiscounts) { result += "|:--|:--"; }
-      if (hasPSPlusDiscounts) { result += "|:--|:--"; }
-      result += "\n";
-
-      $(sortedLinks).each(function(idx, link) {
-        result +=
-          "[" + link.name.replace("[", "\\[").replace("]", "\\]") + "]" +
-          "(" + 'https://store.playstation.com/#!cid=' + link.id + ")";
-
-        if (hasDiscounts) {
-          result += "|" +
-          (link.normalReward ? link.normalReward.display_price : link.default_sku.display_price) + "|" +
-          (link.normalReward ? link.normalReward.discount + "%" : "–");
-        }
-        if (hasPSPlusDiscounts) {
-          result += "|" +
-            (link.plusReward ? link.plusReward.bonus_display_price || link.plusReward.display_price || '—' : (hasDiscounts ? '–' : link.default_sku.display_price || '–')) + "|" +
-            (link.plusReward ? link.plusReward.bonus_discount || link.plusReward.discount || '—' : '–') + (link.plusReward && (link.plusReward.bonus_discount || link.plusReward.discount) ? "%" : '');
-        }
+        var result = "Game";
+        if (hasDiscounts) { result += "|Price|% Off"; }
+        if (hasPSPlusDiscounts) { result += "|PS+|% Off"; }
+        result += "\n:--";
+        if (hasDiscounts) { result += "|:--|:--"; }
+        if (hasPSPlusDiscounts) { result += "|:--|:--"; }
         result += "\n";
-      });
 
-      sendResponse({data: result});
-    });
+        $(sortedLinks).each(function(idx, link) {
+          result +=
+            "[" + link.name.replace("[", "\\[").replace("]", "\\]") + "]" +
+            "(" + 'https://store.playstation.com/#!cid=' + link.id + ")";
+
+          if (hasDiscounts) {
+            result += "|" +
+            (link.normalReward ? link.normalReward.display_price : link.default_sku.display_price) + "|" +
+            (link.normalReward ? link.normalReward.discount + "%" : "–");
+          }
+          if (hasPSPlusDiscounts) {
+            result += "|" +
+              (link.plusReward ? link.plusReward.bonus_display_price || link.plusReward.display_price || '—' : (hasDiscounts ? '–' : link.default_sku.display_price || '–')) + "|" +
+              (link.plusReward ? link.plusReward.bonus_discount || link.plusReward.discount || '—' : '–') + (link.plusReward && (link.plusReward.bonus_discount || link.plusReward.discount) ? "%" : '');
+          }
+          result += "\n";
+        });
+
+        sendResponse({data: result});
+      })
+      .fail(function(jqXHR, textStatus, errorThrown) {
+        return sendResponse({error: "Error returned. Maybe sale does not exist for the selected region?"});
+      });
 
     // Async sendResponse
     return true;

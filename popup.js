@@ -1,14 +1,16 @@
 $(function() {
-  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-    refresh(tabs[0].id);
-  });
+  function consoleReloadDeals() {
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      refresh(tabs[0].id);
+    });
+  }
 
   function refresh(tabId) {
     $('#error').hide();
     $('#result').hide();
     $('#progress').show();
 
-    chrome.tabs.sendMessage(tabId, {}, function(response) {
+    chrome.tabs.sendMessage(tabId, { region: $('#region').val() }, function(response) {
       if (!response) {
         $('#error-message').html('Did not receive any data. Try reloading the page and retrying again. If the error persists - please check console logs and report to <a href="https://reddit.com/u/kpumukus">/u/kpumukus</a>.');
         $('#progress').hide();
@@ -30,4 +32,7 @@ $(function() {
       }
     });
   }
+
+  consoleReloadDeals();
+  $('#region').change(consoleReloadDeals);
 });
