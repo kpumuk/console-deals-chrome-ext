@@ -9,16 +9,27 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   }
 
   function renderPlayStationTable(sendResponse, region) {
+    // Parse sale ID
     var matches = location.hash.match(/cid=([a-zA-Z0-9\-]+).*/);
     var cid;
     if (matches) {
       cid = matches[1];
     } else {
       return sendResponse({error: "Please navigate to a PlayStation sale page"});
-      // return false;
     }
+    // Parse region
+    var country, locale;
+    if (region === undefined || region === "") {
+      matches = location.hash.match(/!\/([a-zA-Z]{2}-[a-zA-Z]{2})\//);
+      region = matches[1];
+    }
+    var regionParts = region.split("-");
+    var locale = regionParts[0];
+    var country = regionParts[1];
+
+    // Fetch sale details
     var cacheBust = new Date().getTime();
-    var url = 'https://store.playstation.com/chihiro-api/viewfinder/' + region + '/en/19/' + cid + '?platform=ps4&size=300&gkb=1&geoCountry=' + region + '&t=' + cacheBust;
+    var url = 'https://store.playstation.com/chihiro-api/viewfinder/' + country + '/' + locale + '/19/' + cid + '?platform=ps4&size=300&gkb=1&geoCountry=' + country + '&t=' + cacheBust;
     $.getJSON(url)
       .done(function(d) {
         if (d.links.length == 0) {
