@@ -59,6 +59,31 @@
         line-height: 1.5rem;
         padding: 0px 50px;
       }
+      #preview {
+        max-height: 300px;
+        overflow: scroll;
+      }
+      #preview-table {
+        width: 100%;
+        border-spacing: 0;
+      }
+      #preview-table td, #preview-table th {
+        padding: 3px;
+      }
+      #preview-table thead tr {
+        background-color: #8bc5f7;
+        color: #003d9e;
+      }
+      #preview-table tbody tr:hover {
+        background-color: #b6e8fb;
+      }
+      #preview-table tbody td {
+        text-align: right;
+        border-bottom: 1px solid #ddeeff;
+      }
+      #preview-table tbody td:first-child {
+        text-align: left;
+      }
     </style>
     <link href="spinner.css" rel="stylesheet" />
     <script src="jquery-3.2.1.min.js"></script>
@@ -86,9 +111,23 @@
           <option value="ps3">PS3</option>
           <option value="vita">PS Vita</option>
         </select>
+
+        <div style="float: right">
+          <label>
+            <input type="radio" name="show-table" value="reddit" checked />
+            Reddit
+          </label>
+          <label>
+            <input type="radio" name="show-table" value="preview" />
+            Preview
+          </label>
+        </div>
       </div>
       <div id="result">
         <textarea id="reddit-table"></textarea>
+        <div id="preview">
+          <table id="preview-table"></table>
+        </div>
       </div>
       <div id="progress">
         <div id="spinner" spinner>

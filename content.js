@@ -66,32 +66,46 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         });
 
         var result = "Game";
-        if (hasDiscounts) { result += "|Price|% Off"; }
-        if (hasPSPlusDiscounts) { result += "|PS+|% Off"; }
+        var preview = "<thead><tr><th>Game</th>";
+        if (hasDiscounts) {
+          result += "|Price|% Off";
+          preview += "<th>Price</th><th>% Off</th>"
+        }
+        if (hasPSPlusDiscounts) {
+          result += "|PS+|% Off";
+          preview += "<th>PS+</th><th>% Off</th>"
+        }
         result += "\n:--";
         if (hasDiscounts) { result += "|:--|:--"; }
         if (hasPSPlusDiscounts) { result += "|:--|:--"; }
         result += "\n";
+        preview += "</tr></thead><tbody>";
 
         $(sortedLinks).each(function(idx, link) {
           result +=
             "[" + link.name.replace("[", "\\[").replace("]", "\\]") + "]" +
             "(" + 'https://store.playstation.com/#!cid=' + link.id + ")";
+          preview += "<tr>" +
+            "<td><a href=\"" + 'https://store.playstation.com/#!cid=' + link.id + "\">" + htmlEscape(link.name) + '</a></td>';
 
           if (hasDiscounts) {
-            result += "|" +
-            (link.normalReward ? link.normalReward.display_price : link.default_sku.display_price) + "|" +
-            (link.normalReward ? link.normalReward.discount + "%" : "–");
+            var price = (link.normalReward ? link.normalReward.display_price : link.default_sku.display_price)
+            var discount = (link.normalReward ? link.normalReward.discount + "%" : "–");
+            result += "|" + price + "|" + discount;
+            preview += "<td>" + price + "</td><td>" + discount + "</td>";
           }
           if (hasPSPlusDiscounts) {
-            result += "|" +
-              (link.plusReward ? link.plusReward.bonus_display_price || link.plusReward.display_price || '—' : (hasDiscounts ? '–' : link.default_sku.display_price || '–')) + "|" +
-              (link.plusReward ? link.plusReward.bonus_discount || link.plusReward.discount || '—' : '–') + (link.plusReward && (link.plusReward.bonus_discount || link.plusReward.discount) ? "%" : '');
+            var plusPrice = (link.plusReward ? link.plusReward.bonus_display_price || link.plusReward.display_price || '—' : (hasDiscounts ? '–' : link.default_sku.display_price || '–'));
+            var plusDiscount = (link.plusReward ? link.plusReward.bonus_discount || link.plusReward.discount || '—' : '–') + (link.plusReward && (link.plusReward.bonus_discount || link.plusReward.discount) ? "%" : '');
+            result += "|" + plusPrice + "|" + plusDiscount;
+            preview += "<td>" + plusPrice + "</td><td>" + plusDiscount + "</td>";
           }
           result += "\n";
+          preview += "</tr>";
         });
 
-        sendResponse({data: result});
+        preview += "</tbody>";
+        sendResponse({data: result, preview: preview});
       })
       .fail(function(jqXHR, textStatus, errorThrown) {
         return sendResponse({error: "Error returned. Maybe sale does not exist for the selected region?"});
@@ -99,6 +113,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
     // Async sendResponse
     return true;
+  }
+
+  function htmlEscape(value) {
+    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   function renderXboxTable(sendResponse) {

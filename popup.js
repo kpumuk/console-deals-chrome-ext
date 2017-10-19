@@ -26,9 +26,12 @@ $(function() {
       } else {
         $('#error').hide();
         $('#reddit-table').text(response.data);
+        $('#preview-table').html(response.preview);
         $('#progress').hide();
+        switchResultTable();
         $('#result').show();
-        $('#reddit-table').focus().select();
+        // Simple trick to make sure reddit table contents is selected
+        switchResultTable();
       }
 
       if (response.retryIn) {
@@ -37,7 +40,19 @@ $(function() {
     });
   }
 
+  function switchResultTable() {
+    var table = $('#options input[name=show-table]:checked').val();
+    if (table === "preview") {
+      $('#reddit-table').hide();
+      $('#preview').show();
+    } else {
+      $('#preview').hide();
+      $('#reddit-table').show().focus().select();
+    }
+  }
+
   consoleReloadDeals();
   $('#region').change(consoleReloadDeals);
   $('#platform').change(consoleReloadDeals);
+  $('#options input[name=show-table]').change(switchResultTable);
 });
