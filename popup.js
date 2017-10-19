@@ -10,7 +10,11 @@ $(function() {
     $('#result').hide();
     $('#progress').show();
 
-    chrome.tabs.sendMessage(tabId, { region: $('#region').val() }, function(response) {
+    var options = {
+      region: $('#region').val(),
+      platform: $('#platform').val(),
+    };
+    chrome.tabs.sendMessage(tabId, options, function(response) {
       if (!response) {
         $('#error-message').html('Did not receive any data. Try reloading the page and retrying again. If the error persists - please check console logs and report to <a href="https://reddit.com/u/kpumukus">/u/kpumukus</a>.');
         $('#progress').hide();
@@ -35,4 +39,5 @@ $(function() {
 
   consoleReloadDeals();
   $('#region').change(consoleReloadDeals);
+  $('#platform').change(consoleReloadDeals);
 });

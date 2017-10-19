@@ -1,14 +1,14 @@
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   switch(location.host) {
     case "store.playstation.com":
-      return renderPlayStationTable(sendResponse, request.region);
+      return renderPlayStationTable(sendResponse, request.region, request.platform);
     case "www.xbox.com":
       return renderXboxTable(sendResponse);
     default:
       return sendResponse({error: "Unknown website, should never happen"});
   }
 
-  function renderPlayStationTable(sendResponse, region) {
+  function renderPlayStationTable(sendResponse, region, platform) {
     // Parse sale ID
     var matches = location.hash.match(/cid=([a-zA-Z0-9\-]+).*/);
     var cid;
@@ -29,20 +29,14 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
     // Fetch sale details
     var cacheBust = new Date().getTime();
-    var url = 'https://store.playstation.com/chihiro-api/viewfinder/' + country + '/' + locale + '/19/' + cid + '?platform=ps4&size=300&gkb=1&geoCountry=' + country + '&t=' + cacheBust;
+    var url = 'https://store.playstation.com/chihiro-api/viewfinder/' + country + '/' + locale + '/19/' + cid + '?platform=' + platform + '&size=300&gkb=1&geoCountry=' + country + '&t=' + cacheBust;
     $.getJSON(url)
       .done(function(d) {
         if (d.links.length == 0) {
           return sendResponse({error: "No results found, reloading in 5 seconds...", retryIn: 5000});
         }
 
-        var filteredLinks = $.grep(d.links, function(link) {
-          return link.playable_platform.find(function(platform) {
-            return !!platform.match(/^ps4/i);
-          });
-        });
-
-        var sortedLinks = filteredLinks.sort(function(a, b) {
+        var sortedLinks = d.links.sort(function(a, b) {
           if (a.name > b.name) return 1;
           if (a.name < b.name) return -1;
           return 0
