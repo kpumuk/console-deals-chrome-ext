@@ -37,9 +37,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         }
 
         var sortedLinks = d.links.sort(function(a, b) {
-          if (a.name > b.name) return 1;
-          if (a.name < b.name) return -1;
-          return 0
+          return a.name.localeCompare(b.name);
         });
 
         var hasDiscounts = false;
@@ -116,7 +114,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   }
 
   function htmlEscape(value) {
-    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return $('<div/>').text(value).html();
   }
 
   function renderXboxTable(sendResponse) {
