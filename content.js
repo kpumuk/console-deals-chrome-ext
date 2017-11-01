@@ -80,11 +80,12 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         preview += "</tr></thead><tbody>";
 
         $(sortedLinks).each(function(idx, link) {
+          var href = 'https://store.playstation.com/#!/' + region + '/cid=' + link.id;
           result +=
             "[" + link.name.replace("[", "\\[").replace("]", "\\]") + "]" +
-            "(" + 'https://store.playstation.com/#!cid=' + link.id + ")";
+            "(" + href + ")";
           preview += "<tr>" +
-            "<td><a href=\"" + 'https://store.playstation.com/#!cid=' + link.id + "\">" + htmlEscape(link.name) + '</a></td>';
+            "<td><a href=\"" + href + "\">" + htmlEscape(link.name) + '</a></td>';
 
           if (hasDiscounts) {
             var price = (link.normalReward ? link.normalReward.display_price : link.default_sku.display_price)
