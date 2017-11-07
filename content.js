@@ -26,7 +26,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     var country = regionParts[1];
 
     // Fetch sale details
-    var url = 'https://store.playstation.com/valkyrie-api/' + locale + '/' + country + '/19/container/' + cid + '?gameContentType=games%2Cbundles%2Caddons&platform=' + platform + '&size=300&bucket=games&t=' + new Date().getTime();
+    var url = 'https://store.playstation.com/valkyrie-api/' + locale + '/' + country + '/19/container/' + cid + '?sort=name&direction=asc&game_content_type=games,bundles,addons&platform=' + platform + '&size=300&bucket=games&t=' + new Date().getTime();
     $.getJSON(url)
       .done(function(d) {
         if (d.included.length == 0) {
@@ -36,20 +36,25 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         var hasDiscounts = false;
         var hasPSPlusDiscounts = false;
 
-        var items = d.included.filter(function(a) {
-          return  (
-                    a.type === "game" ||
-                    a.type === "game-related"
+        var items = d.included.filter(function(item) {
+          return item.attributes["badge-info"] &&
+                  (
+                    // Has any discounts
+                    item.attributes["badge-info"]["non-plus-user"] ||
+                    item.attributes["badge-info"]["plus-user"]
                   ) &&
                   (
-                    a.attributes["top-category"] === "downloadable_game" ||
-                    a.attributes["top-category"] === "add_on"
-                  );
+                    // Game or game related content
+                    item.type === "game" ||
+                    item.type === "game-related"
+                  ) &&
+                  // Has a default SKU
+                  item.attributes["default-sku-id"];
         }).sort(function(a, b) {
           return a.attributes.name.localeCompare(b.attributes.name);
         });
 
-        console.log(items);
+        // console.log(items);
 
         $(items).each(function(idx, item) {
           if (item.attributes["badge-info"] && item.attributes["badge-info"]["non-plus-user"]) {
@@ -63,7 +68,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
           item["default-sku"] = item.attributes.skus.find(function(a) {
             return a.id == item.attributes["default-sku-id"];
           });
-          // item.name = item.attributes.name;
+          item.name = item.attributes.name;
         });
 
         var result = "Game";
@@ -132,24 +137,13 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   }
 
   function parsePlaystationStoreUrl() {
-    // Parse region
-    var result = {};
-
-    var matches = location.hash.match(/cid=([a-zA-Z0-9\-]+).*/);
+    var matches = location.pathname.match(/\/([a-zA-Z]{2}-[a-zA-Z]{2})\/grid\/([a-zA-Z0-9\-]+).*/);
     if (matches) {
-      result.cid = matches[1];
-
-      matches = location.hash.match(/!\/([a-zA-Z]{2}-[a-zA-Z]{2})\//);
-      result.region = matches[1];
-    } else {
-      var matches = location.pathname.match(/\/([a-zA-Z]{2}-[a-zA-Z]{2})\/grid\/([a-zA-Z0-9\-]+).*/);
-      if (matches) {
-        result.region = matches[1];
-        result.cid = matches[2];
+      return {
+        region: matches[1],
+        cid: matches[2],
       }
     }
-
-    return result;
   }
 
   function renderXboxTable(sendResponse) {
