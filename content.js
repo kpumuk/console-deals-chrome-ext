@@ -9,58 +9,61 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   }
 
   function renderPlayStationTable(sendResponse, region, platform) {
-    // Parse sale ID
-    var matches = location.hash.match(/cid=([a-zA-Z0-9\-]+).*/);
-    var cid;
-    if (matches) {
-      cid = matches[1];
-    } else {
+    // Parse URL
+    var parsedUrl = parsePlaystationStoreUrl()
+
+    var cid = parsedUrl.cid;
+    if (cid === undefined) {
       return sendResponse({error: "Please navigate to a PlayStation sale page"});
     }
     // Parse region
     var country, locale;
     if (region === undefined || region === "") {
-      matches = location.hash.match(/!\/([a-zA-Z]{2}-[a-zA-Z]{2})\//);
-      region = matches[1];
+      region = parsedUrl.region;
     }
     var regionParts = region.split("-");
     var locale = regionParts[0];
     var country = regionParts[1];
 
     // Fetch sale details
-    var cacheBust = new Date().getTime();
-    var url = 'https://store.playstation.com/chihiro-api/viewfinder/' + country + '/' + locale + '/19/' + cid + '?platform=' + platform + '&size=300&gkb=1&geoCountry=' + country + '&t=' + cacheBust;
+    var url = 'https://store.playstation.com/valkyrie-api/' + locale + '/' + country + '/19/container/' + cid + '?gameContentType=games%2Cbundles%2Caddons&platform=' + platform + '&size=300&bucket=games&t=' + new Date().getTime();
     $.getJSON(url)
       .done(function(d) {
-        if (d.links.length == 0) {
+        if (d.included.length == 0) {
           return sendResponse({error: "No results found, reloading in 5 seconds...", retryIn: 5000});
         }
 
-        var sortedLinks = d.links.sort(function(a, b) {
-          return a.name.localeCompare(b.name);
-        });
-
         var hasDiscounts = false;
         var hasPSPlusDiscounts = false;
-        $(sortedLinks).each(function(idx, link) {
-          $(link.default_sku.rewards).each(function(_, reward) {
-            if (reward.bonus_discount) {
-              hasDiscounts = true;
-              hasPSPlusDiscounts = true;
-              link.plusReward = reward;
-              link.normalReward = reward;
-            } else if (reward.isPlus) {
-              if (!link.plusReward || (reward.bonus_discount || reward.discount || 0) > (link.plusReward.bonus_discount || link.plusReward.discount || 0)) {
-                hasPSPlusDiscounts = true;
-                link.plusReward = reward;
-              }
-            } else {
-              if (!link.normalReward || reward.discount > link.normalReward.discount) {
-                hasDiscounts = true;
-                link.normalReward = reward;
-              }
-            }
-          })
+
+        var items = d.included.filter(function(a) {
+          return  (
+                    a.type === "game" ||
+                    a.type === "game-related"
+                  ) &&
+                  (
+                    a.attributes["top-category"] === "downloadable_game" ||
+                    a.attributes["top-category"] === "add_on"
+                  );
+        }).sort(function(a, b) {
+          return a.attributes.name.localeCompare(b.attributes.name);
+        });
+
+        console.log(items);
+
+        $(items).each(function(idx, item) {
+          if (item.attributes["badge-info"] && item.attributes["badge-info"]["non-plus-user"]) {
+            hasDiscounts = true;
+          }
+
+          if (item.attributes["badge-info"] && item.attributes["badge-info"]["plus-user"]) {
+            hasPSPlusDiscounts = true;
+          }
+
+          item["default-sku"] = item.attributes.skus.find(function(a) {
+            return a.id == item.attributes["default-sku-id"];
+          });
+          // item.name = item.attributes.name;
         });
 
         var result = "Game";
@@ -79,23 +82,33 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         result += "\n";
         preview += "</tr></thead><tbody>";
 
-        $(sortedLinks).each(function(idx, link) {
-          var href = 'https://store.playstation.com/#!/' + region + '/cid=' + link.id;
+        $(items).each(function(idx, item) {
+          var href = 'https://store.playstation.com/' + region + '/product/' + item.id;
           result +=
-            "[" + link.name.replace("[", "\\[").replace("]", "\\]") + "]" +
+            "[" + item.attributes.name.replace("[", "\\[").replace("]", "\\]") + "]" +
             "(" + href + ")";
           preview += "<tr>" +
-            "<td><a href=\"" + href + "\">" + htmlEscape(link.name) + '</a></td>';
+            "<td><a href=\"" + href + "\">" + htmlEscape(item.attributes.name) + '</a></td>';
 
+          var prices = item["default-sku"]["prices"];
           if (hasDiscounts) {
-            var price = (link.normalReward ? link.normalReward.display_price : link.default_sku.display_price)
-            var discount = (link.normalReward ? link.normalReward.discount + "%" : "–");
+            var price = prices["non-plus-user"]["actual-price"].display;
+            var discount = prices["non-plus-user"]["discount-percentage"];
+            discount = discount == 0 ? "–" : discount + "%";
+
             result += "|" + price + "|" + discount;
             preview += "<td>" + price + "</td><td>" + discount + "</td>";
           }
           if (hasPSPlusDiscounts) {
-            var plusPrice = (link.plusReward ? link.plusReward.bonus_display_price || link.plusReward.display_price || '—' : (hasDiscounts ? '–' : link.default_sku.display_price || '–'));
-            var plusDiscount = (link.plusReward ? link.plusReward.bonus_discount || link.plusReward.discount || '—' : '–') + (link.plusReward && (link.plusReward.bonus_discount || link.plusReward.discount) ? "%" : '');
+            var plusPrice = prices["plus-user"]["actual-price"].display;
+            var plusDiscount = prices["plus-user"]["discount-percentage"];
+            plusDiscount = plusDiscount == 0 ? "–" : plusDiscount + "%";
+
+            if (plusDiscount === discount) {
+              plusPrice = "";
+              plusDiscount = "";
+            }
+
             result += "|" + plusPrice + "|" + plusDiscount;
             preview += "<td>" + plusPrice + "</td><td>" + plusDiscount + "</td>";
           }
@@ -116,6 +129,27 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
   function htmlEscape(value) {
     return $('<div/>').text(value).html();
+  }
+
+  function parsePlaystationStoreUrl() {
+    // Parse region
+    var result = {};
+
+    var matches = location.hash.match(/cid=([a-zA-Z0-9\-]+).*/);
+    if (matches) {
+      result.cid = matches[1];
+
+      matches = location.hash.match(/!\/([a-zA-Z]{2}-[a-zA-Z]{2})\//);
+      result.region = matches[1];
+    } else {
+      var matches = location.pathname.match(/\/([a-zA-Z]{2}-[a-zA-Z]{2})\/grid\/([a-zA-Z0-9\-]+).*/);
+      if (matches) {
+        result.region = matches[1];
+        result.cid = matches[2];
+      }
+    }
+
+    return result;
   }
 
   function renderXboxTable(sendResponse) {
