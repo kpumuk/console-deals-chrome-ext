@@ -166,8 +166,9 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     // Is it a game or game-related content?
     if (!["game", "game-related"].includes(item.type)) return false;
 
+    // console.log(item);
+
     // Seems to be a game
-    console.log(item);
     return true;
   }
 
