@@ -26,7 +26,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     var country = regionParts[1];
 
     // Fetch sale details
-    var url = 'https://store.playstation.com/valkyrie-api/' + locale + '/' + country + '/19/container/' + cid + '?sort=name&direction=asc&game_content_type=games,bundles,addons&platform=' + platform + '&size=300&bucket=games&t=' + new Date().getTime();
+    var url = buildPlaystationStoreApiUrl(locale, country, cid, platform);
     $.getJSON(url)
       .done(function(d) {
         if (d.included.length == 0) {
@@ -36,33 +36,24 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         var hasDiscounts = false;
         var hasPSPlusDiscounts = false;
 
-        var items = d.included.filter(function(item) {
-          return item.attributes["badge-info"] &&
-                  (
-                    // Has any discounts
-                    item.attributes["badge-info"]["non-plus-user"] ||
-                    item.attributes["badge-info"]["plus-user"]
-                  ) &&
-                  (
-                    // Game or game related content
-                    item.type === "game" ||
-                    item.type === "game-related"
-                  ) &&
-                  // Has a default SKU
-                  item.attributes["default-sku-id"];
-        }).sort(function(a, b) {
+        var items = d.included.filter(isDiscountedPlaystationGame).sort(function(a, b) {
           return a.attributes.name.localeCompare(b.attributes.name);
         });
 
         // console.log(items);
 
         $(items).each(function(idx, item) {
-          if (item.attributes["badge-info"] && item.attributes["badge-info"]["non-plus-user"]) {
-            hasDiscounts = true;
-          }
+          if (item.attributes["badge-info"]) {
+            var badge = item.attributes["badge-info"];
+            var itemHasNonPlusDiscount = badge["non-plus-user"] && !badge["non-plus-user"]["is-plus"];
 
-          if (item.attributes["badge-info"] && item.attributes["badge-info"]["plus-user"]) {
-            hasPSPlusDiscounts = true;
+            if (itemHasNonPlusDiscount) {
+              hasDiscounts = true;
+            }
+
+            if (badge["plus-user"] && (!itemHasNonPlusDiscount || badge["plus-user"]["discount-percentage"] != badge["non-plus-user"]["discount-percentage"])) {
+              hasPSPlusDiscounts = true;
+            }
           }
 
           item["default-sku"] = item.attributes.skus.find(function(a) {
@@ -72,7 +63,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         });
 
         var result = "Game";
-        var preview = "<thead><tr><th>Game</th>";
+        var preview = "<thead><tr><th>Game (" + items.length + ")</th>";
         if (hasDiscounts) {
           result += "|Price|% Off";
           preview += "<th>Price</th><th>% Off</th>"
@@ -136,6 +127,25 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     return $('<div/>').text(value).html();
   }
 
+  function buildPlaystationStoreApiUrl(locale, country, cid, platform) {
+    var url = [
+      'https://store.playstation.com/valkyrie-api',
+      locale,
+      country,
+      '19/container',
+      cid
+    ].join('/');
+    var params = {
+      sort:      'name',               // sort field
+      direction: 'asc',                // sort direction
+      platform:  platform,             // platform ID
+      size:      300,                  // how many records to return
+      bucket:    'games',              // content type bucket
+      t:         new Date().getTime()  // cache buster
+    }
+    return url + '?' + $.param(params);
+  }
+
   function parsePlaystationStoreUrl() {
     var matches = location.pathname.match(/\/([a-zA-Z]{2}-[a-zA-Z]{2})\/grid\/([a-zA-Z0-9\-]+).*/);
     if (matches) {
@@ -144,6 +154,21 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         cid: matches[2],
       }
     }
+  }
+
+  function isDiscountedPlaystationGame(item) {
+    // Does it have a discount?
+    if (!item.attributes["badge-info"]) return false;
+    var badge = item.attributes["badge-info"];
+    if (!badge["non-plus-user"] || !badge["plus-user"]) return false;
+    // Does it have default SKU?
+    if (!item.attributes["default-sku-id"]) return false;
+    // Is it a game or game-related content?
+    if (!["game", "game-related"].includes(item.type)) return false;
+
+    // Seems to be a game
+    console.log(item);
+    return true;
   }
 
   function renderXboxTable(sendResponse) {
