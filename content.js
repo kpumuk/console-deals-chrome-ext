@@ -137,6 +137,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (!item.attributes["default-sku-id"]) return false;
     // Is it a game or game-related content?
     if (!["game", "game-related"].includes(item.type)) return false;
+    // Is it a known non-game media?
+    if (["Dynamic Theme", "Theme", "Avatar", "Avatars", "Costume"].includes(item.attributes["game-content-type"])) return false;
+    if (item.attributes["game-content-type"] === "" && ["THEME"].includes(item.attributes["secondary-classification"])) return false;
+
+    // console.log({name: item.attributes.name, item});
 
     // Seems to be a game
     return true;
