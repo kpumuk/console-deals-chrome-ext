@@ -1,4 +1,4 @@
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch(location.host) {
     case "store.playstation.com":
       return renderPlayStationTable(sendResponse, request.region, request.platform);
@@ -62,6 +62,10 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     return $('<div/>').text(value).html();
   }
 
+  function redditEscape(value) {
+    return value.replace("[", "\\[").replace("]", "\\]");
+  }
+
   function buildPlaystationStoreApiUrl(locale, country, cid, platform) {
     var url = [
       'https://store.playstation.com/valkyrie-api',
@@ -105,9 +109,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         badge["plus-user"]["discount-percentage"] != badge["non-plus-user"]["discount-percentage"]
       );
 
-    var defaultSku = item.attributes.skus.find(function(a) {
-      return a.id == item.attributes["default-sku-id"];
-    });
+    var defaultSku = item.attributes.skus.find((a) => a.id == item.attributes["default-sku-id"]);
     var prices = defaultSku["prices"];
 
     if (itemHasNonPlusDiscount) extractPlaystationPrice(prices, result, false);
@@ -141,25 +143,19 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   }
 
   function renderPlaystationRedditTable(games, hasDiscounts, hasPlusDiscounts) {
-    var result = "Game";
+    var headers = [ "Game" ];
+    if (hasDiscounts) headers.push("Price", "% Off");
+    if (hasPlusDiscounts) headers.push("PS+", "% Off");
 
-    if (hasDiscounts) result += "|Price|% Off";
-    if (hasPlusDiscounts) result += "|PS+|% Off";
-    result += "\n:--";
+    var result = redditTableRow(headers) + redditTableRow(headers.map(() => ":--"));
 
-    if (hasDiscounts) result += "|:--|:--";
-    if (hasPlusDiscounts) result += "|:--|:--";
-    result += "\n";
+    $(games).each((idx, game) => {
+      var cols = [ "[" + redditEscape(game.name) + "](" + game.url + ")" ];
 
-    $(games).each(function(idx, game) {
-      result +=
-        "[" + game.name.replace("[", "\\[").replace("]", "\\]") + "]" +
-        "(" + game.url + ")";
+      if (hasDiscounts) cols.push(game.price, game.discount);
+      if (hasPlusDiscounts) cols.push(game.plusPrice, game.plusDiscount);
 
-      if (hasDiscounts) result += "|" + (game.price || "") + "|" + (game.discount || "");
-      if (hasPlusDiscounts) result += "|" + (game.plusPrice || "") + "|" + (game.plusDiscount || "");
-
-      result += "\n";
+      result += redditTableRow(cols);
     });
     return result;
   }
@@ -171,7 +167,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 
     var result = "<thead>" + htmlTableRow(headers, "th") + "</thead><tbody>";
 
-    $(games).each(function(idx, game) {
+    $(games).each((idx, game) => {
       var cols = [ "<a href=\"" + game.url + "\">" + htmlEscape(game.name) + "</a>" ];
 
       if (hasDiscounts) cols.push(game.price, game.discount);
@@ -189,22 +185,26 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     return "<tr>" + cols.map((c) => "<" + tag + ">" + (c || "") + "</" + tag + ">").join() + "</tr>"
   }
 
+  function redditTableRow(cols) {
+    return cols.map((c) => c || "").join("|") + "\n";
+  }
+
   function renderXboxTable(sendResponse) {
     var urlRegion = document.URL.split("/")[3].toLowerCase();
     var countryCode = urlRegion.split("-")[1].toUpperCase();
 
     var rawGuids = []
-    $(".gameDiv[data-bigid]").each(function() {
+    $(".gameDiv[data-bigid]").each(() => {
       rawGuids.push($(this).attr("data-bigid"));
     });
     // console.log(rawGuids);
     var guidUrl = 'https://displaycatalog.mp.microsoft.com/v7.0/products?bigIds=' + rawGuids.join(",") + '&market=' + countryCode + '&languages=' + urlRegion + '&MS-CV=DGU1mcuYo0WMMp+F.1';
 
     var result = "Game|Price|% Off\n|:--|:--|:--\n";
-    $.getJSON(guidUrl, function(d) {
-      $('.x1Games section.m-product-placement-item').each(function(idx, el) {
+    $.getJSON(guidUrl, (d) => {
+      $('.x1Games section.m-product-placement-item').each((idx, el) => {
         var bigid = $(el).attr('data-bigid');
-        var product = d.Products.find(function(g) { return g.ProductId == bigid });
+        var product = d.Products.find((g) => g.ProductId == bigid);
         // console.log(product.DisplaySkuAvailabilities[0].Availabilities);
 
         result +=
