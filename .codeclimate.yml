@@ -3,5 +3,10 @@ plugins:
     enabled: true
     channel: "eslint-4"
 
+checks:
+  return-statements:
+    config:
+      threshold: 10
+
 exclude_paths:
   - 'jquery-*.min.js'

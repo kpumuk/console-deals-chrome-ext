@@ -9,12 +9,43 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   }
 
   function renderPlayStationTable(sendResponse, region, platform) {
+    var sale = parseSaleInfo(region);
+
+    // Fetch sale details
+    var url = buildPlaystationStoreApiUrl(sale.locale, sale.country, sale.cid, platform);
+    $.getJSON(url)
+      .done((d) => {
+        if (d.included.length == 0) {
+          return sendResponse({error: "No results found, reloading in 5 seconds...", retryIn: 5000});
+        }
+
+        var items = d.included.filter(isDiscountedPlaystationGame).
+          sort((a, b) => a.attributes.name.localeCompare(b.attributes.name));
+
+        var games = items.map((item) => parsePlaystationGames(sale.region, item));
+        var hasDiscounts = !!games.find((item) => item.discount);
+        var hasPlusDiscounts = !!games.find((item) => item.plusDiscount);
+
+        var reddit = renderPlaystationRedditTable(games, hasDiscounts, hasPlusDiscounts);
+        var html = renderPlaystationHTMLTable(games, hasDiscounts, hasPlusDiscounts);
+
+        sendResponse({ reddit, html });
+      })
+      .fail(() => {
+        return sendResponse({ error: "Error returned. Maybe sale does not exist for the selected region?" });
+      });
+
+    // Async sendResponse
+    return true;
+  }
+
+  function parseSaleInfo(region) {
     // Parse URL
     var parsedUrl = parsePlaystationStoreUrl()
 
     var cid = parsedUrl.cid;
     if (cid === undefined) {
-      return sendResponse({error: "Please navigate to a PlayStation sale page"});
+      return sendResponse({ error: "Please navigate to a PlayStation sale page" });
     }
     // Parse region
     if (region === undefined || region === "") {
@@ -24,34 +55,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     var locale = regionParts[0];
     var country = regionParts[1];
 
-    // Fetch sale details
-    var url = buildPlaystationStoreApiUrl(locale, country, cid, platform);
-    $.getJSON(url)
-      .done(function(d) {
-        if (d.included.length == 0) {
-          return sendResponse({error: "No results found, reloading in 5 seconds...", retryIn: 5000});
-        }
-
-        var items = d.included.filter(isDiscountedPlaystationGame).
-          sort((a, b) => a.attributes.name.localeCompare(b.attributes.name));
-
-        // console.log(items);
-
-        var games = items.map((item) => parsePlaystationGames(region, item));
-        var hasDiscounts = !!games.find((item) => item.discount);
-        var hasPlusDiscounts = !!games.find((item) => item.plusDiscount);
-
-        var result = renderPlaystationRedditTable(games, hasDiscounts, hasPlusDiscounts);
-        var preview = renderPlaystationHTMLTable(games, hasDiscounts, hasPlusDiscounts);
-
-        sendResponse({data: result, preview: preview});
-      })
-      .fail(function(jqXHR, textStatus, errorThrown) {
-        return sendResponse({error: "Error returned. Maybe sale does not exist for the selected region?"});
-      });
-
-    // Async sendResponse
-    return true;
+    return { cid, region, locale, country };
   }
 
   function htmlEscape(value) {
@@ -106,22 +110,20 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     });
     var prices = defaultSku["prices"];
 
-    if (itemHasNonPlusDiscount) {
-      result["price"] = prices["non-plus-user"]["actual-price"].display;
-
-      var discount = prices["non-plus-user"]["discount-percentage"];
-      discount = discount == 0 ? "–" : discount + "%";
-      result["discount"] = discount;
-    }
-
-    if (itemHasPlusDiscount) {
-      result["plusPrice"] = prices["plus-user"]["actual-price"].display;
-      var plusDiscount = prices["plus-user"]["discount-percentage"];
-      plusDiscount = plusDiscount == 0 ? "–" : plusDiscount + "%";
-      result["plusDiscount"] = plusDiscount;
-    }
+    if (itemHasNonPlusDiscount) extractPlaystationPrice(prices, result, false);
+    if (itemHasPlusDiscount) extractPlaystationPrice(prices, result, true);
 
     return result;
+  }
+
+  function extractPlaystationPrice(prices, result, isPlus) {
+    var priceInfo = prices[isPlus ? "plus-user" : "non-plus-user"];
+    var price = priceInfo["actual-price"].display;
+    var discount = priceInfo["discount-percentage"];
+    discount = discount == 0 ? "–" : discount + "%";
+
+    result[(isPlus ? "plusPrice" : "price")] = price;
+    result[(isPlus ? "plusDiscount" : "discount")] = discount;
   }
 
   function isDiscountedPlaystationGame(item) {
@@ -163,27 +165,28 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   }
 
   function renderPlaystationHTMLTable(games, hasDiscounts, hasPlusDiscounts) {
-    var result = "<thead><tr><th>Game (" + games.length + ")</th>";
+    var headers = [ "Game (" + games.length + ")" ];
+    if (hasDiscounts) headers.push("Price", "% Off");
+    if (hasPlusDiscounts) headers.push("PS+", "% Off");
 
-    if (hasDiscounts) result += "<th>Price</th><th>% Off</th>";
-    if (hasPlusDiscounts) result += "<th>PS+</th><th>% Off</th>";
-    result += "</tr></thead><tbody>";
+    var result = "<thead>" + htmlTableRow(headers, "th") + "</thead><tbody>";
 
     $(games).each(function(idx, game) {
-      result += "<tr>" +
-        "<td><a href=\"" + game.url + "\">" + htmlEscape(game.name) + '</a></td>';
+      var cols = [ "<a href=\"" + game.url + "\">" + htmlEscape(game.name) + "</a>" ];
 
-      if (hasDiscounts) {
-        result += "<td>" + (game.price || "") + "</td><td>" + (game.discount || "") + "</td>";
-      }
-      if (hasPlusDiscounts) {
-        result += "<td>" + (game.plusPrice || "") + "</td><td>" + (game.plusDiscount || "") + "</td>";
-      }
-      result += "</tr>";
+      if (hasDiscounts) cols.push(game.price, game.discount);
+      if (hasPlusDiscounts) cols.push(game.plusPrice, game.plusDiscount);
+
+      result += htmlTableRow(cols);
     });
 
     result += "</tbody></table>";
     return result;
+  }
+
+  function htmlTableRow(cols, tag) {
+    if (tag === undefined) tag = "td";
+    return "<tr>" + cols.map((c) => "<" + tag + ">" + (c || "") + "</" + tag + ">").join() + "</tr>"
   }
 
   function renderXboxTable(sendResponse) {
@@ -211,7 +214,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
           $('.x1GamePrice', el)[0].innerText +
           "\n";
       });
-      sendResponse({data: result});
+      sendResponse({reddit: result});
     });
 
     // Async sendResponse
