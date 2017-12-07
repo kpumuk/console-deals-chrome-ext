@@ -1,0 +1,7 @@
+plugins:
+  eslint:
+    enabled: true
+    channel: "eslint-4"
+
+exclude_paths:
+  - 'jquery-*.min.js'

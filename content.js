@@ -17,7 +17,6 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       return sendResponse({error: "Please navigate to a PlayStation sale page"});
     }
     // Parse region
-    var country, locale;
     if (region === undefined || region === "") {
       region = parsedUrl.region;
     }
@@ -33,86 +32,18 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
           return sendResponse({error: "No results found, reloading in 5 seconds...", retryIn: 5000});
         }
 
-        var hasDiscounts = false;
-        var hasPSPlusDiscounts = false;
-
-        var items = d.included.filter(isDiscountedPlaystationGame).sort(function(a, b) {
-          return a.attributes.name.localeCompare(b.attributes.name);
-        });
+        var items = d.included.filter(isDiscountedPlaystationGame).
+          sort((a, b) => a.attributes.name.localeCompare(b.attributes.name));
 
         // console.log(items);
 
-        $(items).each(function(idx, item) {
-          if (item.attributes["badge-info"]) {
-            var badge = item.attributes["badge-info"];
-            var itemHasNonPlusDiscount = badge["non-plus-user"] && !badge["non-plus-user"]["is-plus"];
+        var games = items.map((item) => parsePlaystationGames(region, item));
+        var hasDiscounts = !!games.find((item) => item.discount);
+        var hasPlusDiscounts = !!games.find((item) => item.plusDiscount);
 
-            if (itemHasNonPlusDiscount) {
-              hasDiscounts = true;
-            }
+        var result = renderPlaystationRedditTable(games, hasDiscounts, hasPlusDiscounts);
+        var preview = renderPlaystationHTMLTable(games, hasDiscounts, hasPlusDiscounts);
 
-            if (badge["plus-user"] && (!itemHasNonPlusDiscount || badge["plus-user"]["discount-percentage"] != badge["non-plus-user"]["discount-percentage"])) {
-              hasPSPlusDiscounts = true;
-            }
-          }
-
-          item["default-sku"] = item.attributes.skus.find(function(a) {
-            return a.id == item.attributes["default-sku-id"];
-          });
-          item.name = item.attributes.name;
-        });
-
-        var result = "Game";
-        var preview = "<thead><tr><th>Game (" + items.length + ")</th>";
-        if (hasDiscounts) {
-          result += "|Price|% Off";
-          preview += "<th>Price</th><th>% Off</th>"
-        }
-        if (hasPSPlusDiscounts) {
-          result += "|PS+|% Off";
-          preview += "<th>PS+</th><th>% Off</th>"
-        }
-        result += "\n:--";
-        if (hasDiscounts) { result += "|:--|:--"; }
-        if (hasPSPlusDiscounts) { result += "|:--|:--"; }
-        result += "\n";
-        preview += "</tr></thead><tbody>";
-
-        $(items).each(function(idx, item) {
-          var href = 'https://store.playstation.com/' + region + '/product/' + item.id;
-          result +=
-            "[" + item.attributes.name.replace("[", "\\[").replace("]", "\\]") + "]" +
-            "(" + href + ")";
-          preview += "<tr>" +
-            "<td><a href=\"" + href + "\">" + htmlEscape(item.attributes.name) + '</a></td>';
-
-          var prices = item["default-sku"]["prices"];
-          if (hasDiscounts) {
-            var price = prices["non-plus-user"]["actual-price"].display;
-            var discount = prices["non-plus-user"]["discount-percentage"];
-            discount = discount == 0 ? "–" : discount + "%";
-
-            result += "|" + price + "|" + discount;
-            preview += "<td>" + price + "</td><td>" + discount + "</td>";
-          }
-          if (hasPSPlusDiscounts) {
-            var plusPrice = prices["plus-user"]["actual-price"].display;
-            var plusDiscount = prices["plus-user"]["discount-percentage"];
-            plusDiscount = plusDiscount == 0 ? "–" : plusDiscount + "%";
-
-            if (plusDiscount === discount) {
-              plusPrice = "";
-              plusDiscount = "";
-            }
-
-            result += "|" + plusPrice + "|" + plusDiscount;
-            preview += "<td>" + plusPrice + "</td><td>" + plusDiscount + "</td>";
-          }
-          result += "\n";
-          preview += "</tr>";
-        });
-
-        preview += "</tbody>";
         sendResponse({data: result, preview: preview});
       })
       .fail(function(jqXHR, textStatus, errorThrown) {
@@ -139,7 +70,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       sort:      'name',               // sort field
       direction: 'asc',                // sort direction
       platform:  platform,             // platform ID
-      size:      300,                  // how many records to return
+      size:      500,                  // how many records to return
       bucket:    'games',              // content type bucket
       t:         new Date().getTime()  // cache buster
     }
@@ -147,13 +78,50 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   }
 
   function parsePlaystationStoreUrl() {
-    var matches = location.pathname.match(/\/([a-zA-Z]{2}-[a-zA-Z]{2})\/grid\/([a-zA-Z0-9\-]+).*/);
+    var matches = location.pathname.match(/\/([a-zA-Z]{2}-[a-zA-Z]{2})\/grid\/([a-zA-Z0-9-]+).*/);
     if (matches) {
       return {
         region: matches[1],
         cid: matches[2],
       }
     }
+  }
+
+  function parsePlaystationGames(region, item) {
+    var result = {
+      url:  'https://store.playstation.com/' + region + '/product/' + item.id,
+      name: item.attributes.name,
+    };
+
+    var badge = item.attributes["badge-info"];
+    var itemHasNonPlusDiscount = badge["non-plus-user"] && !badge["non-plus-user"]["is-plus"];
+    var itemHasPlusDiscount =
+      badge["plus-user"] && (
+        !itemHasNonPlusDiscount ||
+        badge["plus-user"]["discount-percentage"] != badge["non-plus-user"]["discount-percentage"]
+      );
+
+    var defaultSku = item.attributes.skus.find(function(a) {
+      return a.id == item.attributes["default-sku-id"];
+    });
+    var prices = defaultSku["prices"];
+
+    if (itemHasNonPlusDiscount) {
+      result["price"] = prices["non-plus-user"]["actual-price"].display;
+
+      var discount = prices["non-plus-user"]["discount-percentage"];
+      discount = discount == 0 ? "–" : discount + "%";
+      result["discount"] = discount;
+    }
+
+    if (itemHasPlusDiscount) {
+      result["plusPrice"] = prices["plus-user"]["actual-price"].display;
+      var plusDiscount = prices["plus-user"]["discount-percentage"];
+      plusDiscount = plusDiscount == 0 ? "–" : plusDiscount + "%";
+      result["plusDiscount"] = plusDiscount;
+    }
+
+    return result;
   }
 
   function isDiscountedPlaystationGame(item) {
@@ -166,10 +134,56 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     // Is it a game or game-related content?
     if (!["game", "game-related"].includes(item.type)) return false;
 
-    // console.log(item);
-
     // Seems to be a game
     return true;
+  }
+
+  function renderPlaystationRedditTable(games, hasDiscounts, hasPlusDiscounts) {
+    var result = "Game";
+
+    if (hasDiscounts) result += "|Price|% Off";
+    if (hasPlusDiscounts) result += "|PS+|% Off";
+    result += "\n:--";
+
+    if (hasDiscounts) result += "|:--|:--";
+    if (hasPlusDiscounts) result += "|:--|:--";
+    result += "\n";
+
+    $(games).each(function(idx, game) {
+      result +=
+        "[" + game.name.replace("[", "\\[").replace("]", "\\]") + "]" +
+        "(" + game.url + ")";
+
+      if (hasDiscounts) result += "|" + (game.price || "") + "|" + (game.discount || "");
+      if (hasPlusDiscounts) result += "|" + (game.plusPrice || "") + "|" + (game.plusDiscount || "");
+
+      result += "\n";
+    });
+    return result;
+  }
+
+  function renderPlaystationHTMLTable(games, hasDiscounts, hasPlusDiscounts) {
+    var result = "<thead><tr><th>Game (" + games.length + ")</th>";
+
+    if (hasDiscounts) result += "<th>Price</th><th>% Off</th>";
+    if (hasPlusDiscounts) result += "<th>PS+</th><th>% Off</th>";
+    result += "</tr></thead><tbody>";
+
+    $(games).each(function(idx, game) {
+      result += "<tr>" +
+        "<td><a href=\"" + game.url + "\">" + htmlEscape(game.name) + '</a></td>';
+
+      if (hasDiscounts) {
+        result += "<td>" + (game.price || "") + "</td><td>" + (game.discount || "") + "</td>";
+      }
+      if (hasPlusDiscounts) {
+        result += "<td>" + (game.plusPrice || "") + "</td><td>" + (game.plusDiscount || "") + "</td>";
+      }
+      result += "</tr>";
+    });
+
+    result += "</tbody></table>";
+    return result;
   }
 
   function renderXboxTable(sendResponse) {

@@ -12,7 +12,7 @@ $(function() {
 
     var options = {
       region: $('#region').val(),
-      platform: $('#platform').val(),
+      platform: $('#platform').val()
     };
     chrome.tabs.sendMessage(tabId, options, function(response) {
       if (!response) {
