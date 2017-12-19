@@ -78,7 +78,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sort:      'name',               // sort field
       direction: 'asc',                // sort direction
       platform:  platform,             // platform ID
-      size:      500,                  // how many records to return
+      size:      1000,                 // how many records to return
       bucket:    'games',              // content type bucket
       t:         new Date().getTime()  // cache buster
     }
