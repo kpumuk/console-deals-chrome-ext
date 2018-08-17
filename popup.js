@@ -13,7 +13,9 @@ $(function() {
 
     var options = {
       region: $('#region').val(),
-      platform: $('#platform').val()
+      platform: $('#platform').val(),
+      start: $('#next').data('start') || 0,
+      size: 90,
     };
 
     chrome.tabs.sendMessage(tabId, options, (response) => {
@@ -45,6 +47,21 @@ $(function() {
     $('#result').show();
     // Simple trick to make sure reddit table contents is selected
     switchResultTable();
+
+    // Do we have more results?
+    if (response.start + response.size < response.total) {
+      $('#next').
+        show().
+        html('Next (from ' + (0 + response.start + response.size) + ') &raquo;').
+        data('start', response.start + response.size);
+    } else if (response.total > response.size) {
+      $('#next').
+        show().
+        html('From Beginning &raquo;').
+        data('start', 0);
+    } else {
+      $('#next').hide();
+    }
   }
 
   function switchResultTable() {
@@ -62,4 +79,5 @@ $(function() {
   $('#region').change(consoleReloadDeals);
   $('#platform').change(consoleReloadDeals);
   $('#options input[name=show-table]').change(switchResultTable);
+  $('#next').click(consoleReloadDeals);
 });

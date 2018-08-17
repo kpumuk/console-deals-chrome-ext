@@ -1,18 +1,18 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch(location.host) {
     case "store.playstation.com":
-      return renderPlayStationTable(sendResponse, request.region, request.platform);
+      return renderPlayStationTable(sendResponse, request.region, request.platform, request.start, request.size);
     case "www.xbox.com":
       return renderXboxTable(sendResponse);
     default:
       return sendResponse({error: "Unknown website, should never happen"});
   }
 
-  function renderPlayStationTable(sendResponse, region, platform) {
+  function renderPlayStationTable(sendResponse, region, platform, start, size) {
     var sale = parseSaleInfo(region);
 
     // Fetch sale details
-    var url = buildPlaystationStoreApiUrl(sale.locale, sale.country, sale.cid, platform);
+    var url = buildPlaystationStoreApiUrl(sale.locale, sale.country, sale.cid, platform, start, size);
     $.getJSON(url)
       .done((d) => {
         if (d.included.length == 0) {
@@ -29,7 +29,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         var reddit = renderPlaystationRedditTable(games, hasDiscounts, hasPlusDiscounts);
         var html = renderPlaystationHTMLTable(games, hasDiscounts, hasPlusDiscounts);
 
-        sendResponse({ reddit, html });
+        var total = d.data.attributes['total-results'];
+
+        sendResponse({ reddit, html, total, start, size });
       })
       .fail(() => {
         return sendResponse({ error: "Error returned. Maybe sale does not exist for the selected region?" });
@@ -66,7 +68,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return value.replace("[", "\\[").replace("]", "\\]");
   }
 
-  function buildPlaystationStoreApiUrl(locale, country, cid, platform) {
+  function buildPlaystationStoreApiUrl(locale, country, cid, platform, start, size) {
     var url = [
       'https://store.playstation.com/valkyrie-api',
       locale,
@@ -78,7 +80,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sort:      'name',               // sort field
       direction: 'asc',                // sort direction
       platform:  platform,             // platform ID
-      size:      1000,                 // how many records to return
+      start:     start,                // first record index
+      size:      size,                 // how many records to return
       bucket:    'games',              // content type bucket
       t:         new Date().getTime()  // cache buster
     }
@@ -199,10 +202,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     var countryCode = urlRegion.split("-")[1].toUpperCase();
 
     var rawGuids = []
-    $(".gameDiv[data-bigid]").each(() => {
-      rawGuids.push($(this).attr("data-bigid"));
+    $(".gameDiv[data-bigid]").each((_idx, el) => {
+      rawGuids.push($(el).data("bigid"));
     });
-    // console.log(rawGuids);
+    console.log(rawGuids);
     var guidUrl = 'https://displaycatalog.mp.microsoft.com/v7.0/products?bigIds=' + rawGuids.join(",") + '&market=' + countryCode + '&languages=' + urlRegion + '&MS-CV=DGU1mcuYo0WMMp+F.1';
 
     var result = "Game|Price|% Off\n|:--|:--|:--\n";
