@@ -89,11 +89,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   function parsePlaystationStoreUrl() {
-    var matches = location.pathname.match(/\/([a-zA-Z]{2}-[a-zA-Z]{2})\/grid\/([a-zA-Z0-9-]+).*/);
+    var matches = location.pathname.match(/.*\/(.*?)\/(grid|category)\/(.*?)\/.*/);
     if (matches) {
       return {
         region: matches[1],
-        cid: matches[2],
+        cid: matches[3],
       }
     }
   }

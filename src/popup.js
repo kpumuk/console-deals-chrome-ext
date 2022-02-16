@@ -11,14 +11,14 @@ $(function() {
     $('#result').hide();
     $('#progress').show();
 
-    var options = {
+    var message = {
       region: $('#region').val(),
       platform: $('#platform').val(),
       start: $('#next').data('start') || 0,
       size: 90,
     };
 
-    chrome.tabs.sendMessage(tabId, options, (response) => {
+    chrome.tabs.sendMessage(tabId, message, {}, (response) => {
       if (!response) {
         showError('Did not receive any data. Try reloading the page and retrying again. If the error persists - please check console logs and report to <a href="https://reddit.com/u/kpumukus">/u/kpumukus</a>.');
         return;
