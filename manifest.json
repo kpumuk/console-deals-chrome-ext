@@ -8,12 +8,12 @@
         "https://store.playstation.com/*",
         "https://www.xbox.com/*"
       ],
-      "js": ["jquery-3.2.1.min.js", "content.js"]
+      "js": ["resources/jquery-3.2.1.min.js", "src/content.js"]
     }
   ],
   "page_action": {
     "default_icon": "img/icon-128x128.png",
-    "default_popup": "popup.html"
+    "default_popup": "src/popup.html"
   },
   "icons": {
     "128": "img/icon-128x128.png"
@@ -22,7 +22,7 @@
     "declarativeContent"
   ],
   "background": {
-    "scripts": ["background.js"],
+    "scripts": ["src/background.js"],
     "persistent": false
   }
 }

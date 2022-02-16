@@ -21,6 +21,7 @@ $(function() {
     chrome.tabs.sendMessage(tabId, options, (response) => {
       if (!response) {
         showError('Did not receive any data. Try reloading the page and retrying again. If the error persists - please check console logs and report to <a href="https://reddit.com/u/kpumukus">/u/kpumukus</a>.');
+        return;
       } else if (response.error) {
         showError(response.error);
       } else {

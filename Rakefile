@@ -3,12 +3,12 @@ require 'fileutils'
 
 FILES = [
   'manifest.json',
-  'background.js',
-  'content.js',
-  'jquery-3.2.1.min.js',
-  'popup.html',
-  'popup.js',
-  'spinner.css',
+  'src/background.js',
+  'src/content.js',
+  'resources/jquery-3.2.1.min.js',
+  'src/popup.html',
+  'src/popup.js',
+  'src/spinner.css',
   'img/icon-128x128.png',
 ]
 
