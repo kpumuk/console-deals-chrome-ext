@@ -22,6 +22,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                 let games = Object.keys(dealObj)
                     .map((key) => dealObj[key])
+                    .filter((item) => item.price)
                     .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
                 var hasDiscounts = games.some((item) => item.discount);
