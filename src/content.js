@@ -169,7 +169,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
             let plusDiscount = node.querySelector('[data-qa*="#service-upsell"]');
             if (plusDiscount) {
-                debugger;
                 let plusDiscountNum = getNumber(plusDiscount.textContent)
                     + getNumber(product.discount);
 
