@@ -170,22 +170,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             let plusDiscount = node.querySelector('[data-qa*="#service-upsell"]');
             if (plusDiscount) {
                 debugger;
-                let plusDiscountNum = getNumber(plusDiscount.textContent) * -1
+                let plusDiscountNum = getNumber(plusDiscount.textContent)
                     + getNumber(product.discount);
 
-                Object.assign(product, {
-                    plusPrice: new Intl.NumberFormat('en-US', {
-                            style: 'currency',
-                            currency: 'USD',
-                        }).format(getNumber(product.originalPrice) * ((100 - Math.abs(plusDiscountNum))/100)),
-                    plusDiscount: `${plusDiscountNum}%`
-                });
+                if (plusDiscountNum !== product.discount) {
+                    Object.assign(product, {
+                        plusPrice: new Intl.NumberFormat('en-US', {
+                                style: 'currency',
+                                currency: 'USD',
+                            }).format(getNumber(product.originalPrice) * ((100 - Math.abs(plusDiscountNum))/100)),
+                        plusDiscount: `${plusDiscountNum}%`
+                    });
+                }
+
             }
         });
     }
 
     function getNumber(str) {
-        return Number(str.replace(/[^\d.]/g, ''));
+        return Number(String(str).replace(/[^\d.]/g, ''));
     }
 
 
