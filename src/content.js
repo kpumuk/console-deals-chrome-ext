@@ -21,8 +21,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 clearFilterButton && clearFilterButton.click();
 
                 let games = Object.keys(dealObj)
-                    .sort((a, b) => a.localeCompare(b))
-                    .map((key) => dealObj[key]);
+                    .map((key) => dealObj[key])
+                    .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
                 var hasDiscounts = games.some((item) => item.discount);
                 var hasPlusDiscounts = games.some((item) => item.plusDiscount);
@@ -203,13 +203,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         var result = redditTableRow(headers) + redditTableRow(headers.map(() => ":--"));
 
-        $(games).each((idx, game) => {
+        games.forEach((game) => {
             var cols = ["[" + redditEscape(game.name) + "](" + game.url + ")"];
 
             if (hasDiscounts) cols.push(game.price, game.discount);
             if (hasPlusDiscounts) cols.push(game.plusPrice, game.plusDiscount);
 
-            result += redditTableRow(cols);
+            let row = redditTableRow(cols);
+
+            let pre = Math.floor(result.length / 10000);
+            let post = Math.floor((result.length + row.length) / 10000);
+
+            if (pre !== post) {
+                result += '\n\n';
+                result += redditTableRow(headers) + redditTableRow(headers.map(() => ":--"));
+            }
+
+            result += row;
         });
         return result;
     }
