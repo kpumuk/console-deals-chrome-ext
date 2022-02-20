@@ -172,7 +172,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 let plusDiscountNum = getNumber(plusDiscount.textContent)
                     + getNumber(product.discount);
 
-                if (plusDiscountNum !== product.discount) {
+                if (plusDiscountNum !== getNumber(product.discount)) {
                     Object.assign(product, {
                         plusPrice: new Intl.NumberFormat('en-US', {
                                 style: 'currency',
