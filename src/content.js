@@ -137,11 +137,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             let name = node.querySelector('[data-qa*="#product-name"]')?.textContent.trim();
             let platform = Array.from(node.querySelectorAll('[data-qa*="#game-art#tag"]'))?.map((platformNode) => {
                 return platformNode.textContent;
-            }).join('-');
+            });
 
-            dealObj[`${name}-${platform}`] = dealObj[`${name}-${platform}`] ?? {
+            let key = `${name}-${platform.join('-')}`;
+            dealObj[key] = dealObj[key] ?? {
                 name: name,
-                platform: platform,
+                platform: platform.join(', '),
                 url: new URL(
                         node.querySelector('[data-track="web:store:product-tile"]')?.getAttribute('href'),
                         `${document.location.origin}${document.location.pathname.split('/').slice(0,-1).join('/')}`
@@ -149,19 +150,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 originalPrice: node.querySelector('[data-qa*="#price#price-strikethrough"]')?.textContent
             };
 
-            let product = dealObj[`${name}-${platform}`];
-
             let discount = node.querySelector('[data-qa*="#discount-badge#text"]');
             if (discount) {
                 let price = node.querySelector('[data-qa*="#price#display-price"]');
                 let isPlus = Array.from(discount.classList).includes('psw-discount-badge--ps-plus');
                 if (isPlus) {
-                    Object.assign(product, {
+                    Object.assign(dealObj[key], {
                         plusPrice: price.textContent,
                         plusDiscount: Math.abs(getNumber(discount.textContent)) + '%'
                     });
                 } else {
-                    Object.assign(product, {
+                    Object.assign(dealObj[key], {
                         price: price.textContent,
                         discount: Math.abs(getNumber(discount.textContent)) + '%'
                     });
@@ -171,14 +170,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             let plusDiscount = node.querySelector('[data-qa*="#service-upsell"]');
             if (plusDiscount) {
                 let plusDiscountNum = getNumber(plusDiscount.textContent)
-                    + getNumber(product.discount);
+                    + getNumber(dealObj[key].discount);
 
-                if (plusDiscountNum !== getNumber(product.discount)) {
-                    Object.assign(product, {
+                if (plusDiscountNum !== getNumber(dealObj[key].discount)) {
+                    Object.assign(dealObj[key], {
                         plusPrice: new Intl.NumberFormat('en-US', {
                                 style: 'currency',
                                 currency: 'USD',
-                            }).format(getNumber(product.originalPrice) * ((100 - Math.abs(plusDiscountNum))/100)),
+                            }).format(getNumber(dealObj[key].originalPrice) * ((100 - Math.abs(plusDiscountNum))/100)),
                         plusDiscount: `${plusDiscountNum}%`
                     });
                 }
