@@ -201,14 +201,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     function renderPlaystationRedditTable(games, hasDiscounts, hasPlusDiscounts) {
-        var headers = ["Game"];
-        if (hasDiscounts) headers.push("Price", "% Off");
-        if (hasPlusDiscounts) headers.push("PS+", "% Off");
+        var headers = ['Game', 'Platform'];
+        if (hasDiscounts) headers.push('Price', '% Off');
+        if (hasPlusDiscounts) headers.push('PS+', '% Off');
 
-        var result = redditTableRow(headers) + redditTableRow(headers.map(() => ":--"));
+        var result = redditTableRow(headers) + redditTableRow(headers.map(() => ':--'));
 
         games.forEach((game) => {
-            var cols = ["[" + redditEscape(game.name) + "](" + game.url + ")"];
+            var cols = [
+                '[' + redditEscape(game.name) + '](' + game.url + ')',
+                game.platform
+            ];
 
             if (hasDiscounts) cols.push(game.price, game.discount);
             if (hasPlusDiscounts) cols.push(game.plusPrice, game.plusDiscount);
