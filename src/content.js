@@ -30,7 +30,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                 var reddit = renderPlaystationRedditTable(games, hasDiscounts, hasPlusDiscounts);
                 var html = renderPlaystationHTMLTable(games, hasDiscounts, hasPlusDiscounts);
-                var total = games.length;
+                var total = 0;
+                start = 1;
 
                 sendResponse({
                     reddit,
@@ -176,7 +177,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         plusPrice: new Intl.NumberFormat('en-US', {
                                 style: 'currency',
                                 currency: 'USD',
-                            }).format(getNumber(dealObj[key].originalPrice) * ((100 - Math.abs(plusDiscountNum))/100)),
+                            }).format(Math.floor(getNumber(dealObj[key].originalPrice) * ((100 - Math.abs(plusDiscountNum))))/100),
                         plusDiscount: `${plusDiscountNum}%`
                     });
                 }
@@ -219,7 +220,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             ];
 
             if (hasDiscounts) cols.push(game.price, game.discount);
-            if (hasPlusDiscounts) cols.push(game.plusPrice, game.plusDiscount);
+            if (hasPlusDiscounts) cols.push(game.plusPrice || game.price, game.plusDiscount || game.discount);
 
             return redditTableRow(cols);
         });
