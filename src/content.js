@@ -30,7 +30,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                 var reddit = renderPlaystationRedditTable(games, hasDiscounts, hasPlusDiscounts);
                 var html = renderPlaystationHTMLTable(games, hasDiscounts, hasPlusDiscounts);
-
                 var total = games.length;
 
                 sendResponse({
@@ -200,13 +199,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     function renderPlaystationRedditTable(games, hasDiscounts, hasPlusDiscounts) {
+        let resultArray = [];
+        let limit = 10000;
+
         var headers = ['Game', 'Platform'];
         if (hasDiscounts) headers.push('Price', '% Off');
         if (hasPlusDiscounts) headers.push('PS+', '% Off');
 
-        var result = redditTableRow(headers) + redditTableRow(headers.map(() => ':--'));
+        let headerStr = [
+            redditTableRow(headers),
+            redditTableRow(headers.map(() => ':--'))
+        ].join('\n') + '\n';
+        let stringBuilder = '';
 
-        games.forEach((game) => {
+        let rows = games.map((game) => {
             var cols = [
                 '[' + redditEscape(game.name) + '](' + game.url + ')',
                 game.platform
@@ -215,19 +221,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             if (hasDiscounts) cols.push(game.price, game.discount);
             if (hasPlusDiscounts) cols.push(game.plusPrice, game.plusDiscount);
 
-            let row = redditTableRow(cols);
-
-            let pre = Math.floor(result.length / 10000);
-            let post = Math.floor((result.length + row.length) / 10000);
-
-            if (pre !== post) {
-                result += '\n\n';
-                result += redditTableRow(headers) + redditTableRow(headers.map(() => ":--"));
-            }
-
-            result += row;
+            return redditTableRow(cols);
         });
-        return result;
+        let oldIndex = 0;
+        rows.forEach((row, index) => {
+            let newLength = headerStr.length + stringBuilder.length + row.length;
+            if (newLength > limit) {
+                resultArray.push(rows.slice(oldIndex, index - 1).join('\n'));
+                oldIndex = index;
+                stringBuilder = '';
+            }
+            stringBuilder += row + '\n';
+        });
+        resultArray.push(rows.slice(oldIndex, rows.length - 1).join('\n'));
+
+        return {
+            header: headerStr,
+            tables: resultArray
+        };
     }
 
     function renderPlaystationHTMLTable(games, hasDiscounts, hasPlusDiscounts) {
@@ -256,7 +267,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     function redditTableRow(cols) {
-        return cols.map((c) => c || "").join("|") + "\n";
+        return cols.map((c) => c || "").join("|");
     }
 
     function renderXboxTable(sendResponse) {

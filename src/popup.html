@@ -1,158 +1,171 @@
 <!doctype html>
 <html>
-  <head>
+<head>
     <title>Console Deals to Reddit</title>
     <style>
-      body {
-        overflow: hidden;
-        margin: 0px;
-        padding: 0px;
-        background: white;
-        background: #0c3698;
-        font-family: Verdana;
-      }
-      #container {
-        margin: 10px;
-        padding: 0px;
-        background: #ffffff;
-        border: 1px solid #b2c9f5;
-        border-radius: 5px;
-        min-width: 600px;
-        min-height: 200px;
-      }
-      #options {
-        background: #f0f8ff;
-        padding: 5px;
-      }
-      #result, #progress, #error {
-        width: 600px;
-        height: 100%;
-        text-align: center;
-        vertical-align: middle;
-      }
-      #result {}
-      #result textarea {
-        width: 580px;
-        height: 260px;
-        padding: 10px;
-        margin: 0px;
-        font-family: Verdana;
-        font-size: 0.85rem;
-        line-height: 1rem;
-        border: 0px;
-      }
-      #progress h3, #error h3 {
-        text-align: center;
-      }
-      #spinner {
-        margin: 20px auto;
-      }
-      #result, #error, #next { display: none; }
-      #error h3 {
-        color: red;
-        min-height: 200px;
-        line-height: 200px;
-      }
-      #error-message {
-        display: inline-block;
-        vertical-align: middle;
-        line-height: 1.5rem;
-        padding: 0px 50px;
-      }
-      #preview {
-        max-height: 300px;
-        overflow: scroll;
-      }
-      #preview-table {
-        width: 100%;
-        border-spacing: 0;
-      }
-      #preview-table td, #preview-table th {
-        padding: 3px;
-      }
-      #preview-table thead tr {
-        background-color: #8bc5f7;
-        color: #003d9e;
-      }
-      #preview-table tbody tr:hover {
-        background-color: #b6e8fb;
-      }
-      #preview-table tbody td {
-        text-align: right;
-        border-bottom: 1px solid #ddeeff;
-      }
-      #preview-table tbody td:first-child {
-        text-align: left;
-      }
+        body {
+            overflow: hidden;
+            margin: 0px;
+            padding: 0px;
+            background: white;
+            background: #0c3698;
+            font-family: Verdana;
+        }
+        #container {
+            margin: 10px;
+            padding: 0px;
+            background: #ffffff;
+            border: 1px solid #b2c9f5;
+            border-radius: 5px;
+            min-width: 600px;
+            min-height: 200px;
+        }
+        #options {
+            background: #f0f8ff;
+            padding: 5px;
+        }
+        #result,
+        #progress,
+        #error {
+            width: 600px;
+            height: 100%;
+            text-align: center;
+            vertical-align: middle;
+        }
+        #result textarea {
+            width: 580px;
+            height: 260px;
+            padding: 10px;
+            margin: 0px;
+            font-family: Verdana;
+            font-size: 0.85rem;
+            line-height: 1rem;
+            border: 0px;
+        }
+        #progress h3,
+        #error h3 {
+            text-align: center;
+        }
+        #spinner {
+            margin: 20px auto;
+        }
+        #result,
+        #error,
+        #next {
+            display: none;
+        }
+        #error h3 {
+            color: red;
+            min-height: 200px;
+            line-height: 200px;
+        }
+        #error-message {
+            display: inline-block;
+            vertical-align: middle;
+            line-height: 1.5rem;
+            padding: 0px 50px;
+        }
+        #preview {
+            max-height: 300px;
+            overflow: scroll;
+        }
+        #preview-table {
+            width: 100%;
+            border-spacing: 0;
+        }
+        #preview-table td,
+        #preview-table th {
+            padding: 3px;
+        }
+        #preview-table thead tr {
+            background-color: #8bc5f7;
+            color: #003d9e;
+        }
+        #preview-table tbody tr:hover {
+            background-color: #b6e8fb;
+        }
+        #preview-table tbody td {
+            text-align: right;
+            border-bottom: 1px solid #ddeeff;
+        }
+        #preview-table tbody td:first-child {
+            text-align: left;
+        }
+        #reddit-pager {
+          font-size: 1.2em;
+        }
     </style>
     <link href="spinner.css" rel="stylesheet" />
     <script src="../resources/jquery-3.2.1.min.js"></script>
     <script src="popup.js"></script>
-  </head>
-  <body>
+</head>
+<body>
     <div id="container">
-      <div id="options">
-        <label for="region">Region</label>
-        <select id="region">
-          <option value="" selected>Current Region</option>
-          <option value="pt-br">Brazil</option>
-          <option value="en-ca">Canada</option>
-          <option value="fr-fr">France</option>
-          <option value="de-de">Germany</option>
-          <option value="ru-ru">Russian Federation</option>
-          <option value="ru-ua">Ukraine</option>
-          <option value="en-gb">United Kingdom</option>
-          <option value="en-us">United States</option>
-        </select>
+        <div id="options">
+            <label for="region">Region</label>
+            <select id="region">
+                <option value="" selected>Current Region</option>
+                <option value="pt-br">Brazil</option>
+                <option value="en-ca">Canada</option>
+                <option value="fr-fr">France</option>
+                <option value="de-de">Germany</option>
+                <option value="ru-ru">Russian Federation</option>
+                <option value="ru-ua">Ukraine</option>
+                <option value="en-gb">United Kingdom</option>
+                <option value="en-us">United States</option>
+            </select>
 
-        <label for="platform">Platform</label>
-        <select id="platform">
-          <option value="any" selected>Any</option>
-          <option value="ps5">PS5</option>
-          <option value="ps4">PS4</option>
-          <option value="ps3">PS3</option>
-          <option value="vita">PS Vita</option>
-        </select>
+            <label for="platform">Platform</label>
+            <select id="platform">
+                <option value="any" selected>Any</option>
+                <option value="ps5">PS5</option>
+                <option value="ps4">PS4</option>
+                <option value="ps3">PS3</option>
+                <option value="vita">PS Vita</option>
+            </select>
 
-        <a href="#" id="next" data-start="0">Next &raquo;</a>
+            <a href="#" id="next" data-start="0">Next &raquo;</a>
 
-        <div style="float: right">
-          <label>
-            <input type="radio" name="show-table" value="reddit" checked />
-            Reddit
-          </label>
-          <label>
-            <input type="radio" name="show-table" value="preview" />
-            Preview
-          </label>
+            <div style="float: right">
+                <label>
+                    <input type="radio" name="show-table" value="reddit" checked />
+                    Reddit
+                </label>
+                <label>
+                    <input type="radio" name="show-table" value="preview" />
+                    Preview
+                </label>
+            </div>
         </div>
-      </div>
-      <div id="result">
-        <textarea id="reddit-table"></textarea>
-        <div id="preview">
-          <table id="preview-table"></table>
+        <div id="result">
+            <div id="reddit-result">
+              <textarea id="reddit-table"></textarea>
+              <p id="reddit-pager"></p>
+            </div>
+            <div id="preview">
+                <table id="preview-table"></table>
+            </div>
         </div>
-      </div>
-      <div id="progress">
-        <div id="spinner" spinner>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
+        <div id="progress">
+            <div id="spinner" spinner>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+            <h3>Loading Discounts Data</h3>
         </div>
-        <h3>Loading Discounts Data</h3>
-      </div>
-      <div id="error">
-        <h3><span id="error-message">Hello World</span></h3>
-      </div>
+        <div id="error">
+            <h3><span id="error-message">Hello World</span></h3>
+        </div>
     </div>
-  </body>
+</body>
 </html>

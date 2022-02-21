@@ -40,8 +40,28 @@ $(function() {
     $('#error').show();
   }
 
+  function populateRedditTable(index) {
+    index = Number(index) || 0;
+    let data = JSON.parse($('#reddit-table')[0].dataset['json']);
+    $('#reddit-table')
+      .text(data.header + data.tables[index]);
+    $('#reddit-pager')
+      .html(`
+        <a data-target="${(index + data.tables.length - 1) % data.tables.length}" href="javascript:void(0)" class="reddit-pager">&lt;</a>
+        ${index + 1} of ${data.tables.length}
+        <a data-target="${(index + data.tables.length + 1) % data.tables.length}" href="javascript:void(0)" class="reddit-pager">&gt;</a>
+      `);
+
+    $('.reddit-pager').click(function() {
+      populateRedditTable($(this)[0].dataset.target);
+    });
+  }
+
   function showResult(response) {
-    $('#reddit-table').text(response.reddit);
+    $('#reddit-table')[0]
+        .dataset.json = JSON.stringify(response.reddit);
+    populateRedditTable(0);
+
     $('#preview-table').html(response.html);
     $('#progress').hide();
     switchResultTable();
@@ -68,11 +88,15 @@ $(function() {
   function switchResultTable() {
     var table = $('#options input[name=show-table]:checked').val();
     if (table === "preview") {
-      $('#reddit-table').hide();
+      $('#reddit-result').hide();
       $('#preview').show();
     } else {
       $('#preview').hide();
-      $('#reddit-table').show().focus().select();
+      $('#reddit-result')
+        .show()
+        .find('#reddit-table')
+        .focus()
+        .select();
     }
   }
 
